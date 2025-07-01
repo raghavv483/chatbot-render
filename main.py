@@ -3,7 +3,8 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import os
-
+from dotenv import load_dotenv
+load_dotenv()
 from sentence_transformers import SentenceTransformer
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import PromptTemplate
@@ -11,7 +12,7 @@ from langchain.chains import LLMChain
 import chromadb
 
 # ------------------- CONFIG -------------------
-os.environ["GOOGLE_API_KEY"] = "AIzaSyA2XmTAncsUZogi6RFkS_oUCbgNIKe5Aaw"  # Replace this
+os.environ["GOOGLE_API_KEY"] # Replace this
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 CSV_PATH = "./walmart_products.csv"
 

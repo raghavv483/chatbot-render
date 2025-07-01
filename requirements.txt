@@ -5,3 +5,8 @@ chromadb
 sentence-transformers
 langchain
 langchain-google-genai
+python-dotenv
+transformers
+protobuf
+google-api-core
+python-dotenv
