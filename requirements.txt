@@ -1,8 +1,10 @@
 fastapi
-uvicorn
+uvicorn[standard]
 pandas
 python-dotenv
 sentence-transformers
-langchain
 langchain-google-genai
+langchain-core
+langchain
 chromadb
+pydantic

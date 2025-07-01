@@ -15,7 +15,7 @@ import chromadb
 # ------------------- CONFIG -------------------
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 CSV_PATH = "./walmart_products.csv"
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")  # Correct way to get from .env
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # ------------------- FASTAPI SETUP -------------------
 app = FastAPI()
@@ -119,9 +119,10 @@ def ask_question(query: Query):
 def health():
     return {"status": "ok"}
 
+# Root endpoint
+@app.get("/")
+def root():
+    return {"message": "Walmart RAG API is running"}
 
-# ------------------- LOCAL DEVELOPMENT SUPPORT -------------------
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8000))  # Render will inject PORT env var
-    uvicorn.run("main:app", host="0.0.0.0", port=port)
+# ------------------- RENDER DEPLOYMENT SUPPORT -------------------
+# Remove the if __name__ == "__main__" block for production deployment
