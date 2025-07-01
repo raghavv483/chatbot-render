@@ -5,6 +5,7 @@ import pandas as pd
 import os
 from dotenv import load_dotenv
 load_dotenv()
+
 from sentence_transformers import SentenceTransformer
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import PromptTemplate
@@ -12,17 +13,17 @@ from langchain.chains import LLMChain
 import chromadb
 
 # ------------------- CONFIG -------------------
-os.environ["GOOGLE_API_KEY"] # Replace this
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 CSV_PATH = "./walmart_products.csv"
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")  # Correct way to get from .env
 
 # ------------------- FASTAPI SETUP -------------------
 app = FastAPI()
 
-# Optional: Allow cross-origin for Unity/WebGL
+# Optional: Allow cross-origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update with specific origin in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,7 +32,7 @@ app.add_middleware(
 # ------------------- REQUEST MODEL -------------------
 class Query(BaseModel):
     question: str
-    store: str = "Jaipur"  # Optional: default store
+    store: str = "Jaipur"
 
 # ------------------- LOAD CSV DATA -------------------
 df = pd.read_csv(CSV_PATH)
@@ -55,7 +56,6 @@ embeddings = model.encode(documents).tolist()
 client = chromadb.Client()
 collection = client.get_or_create_collection(name="walmart_products")
 
-# Add data only if empty
 if collection.count() == 0:
     collection.add(
         documents=documents,
@@ -67,7 +67,7 @@ if collection.count() == 0:
 # ------------------- Gemini LLM -------------------
 llm = ChatGoogleGenerativeAI(
     model="gemini-1.5-flash-latest",
-    google_api_key=os.environ["GOOGLE_API_KEY"],
+    google_api_key=GOOGLE_API_KEY,
     temperature=0.3
 )
 
@@ -118,8 +118,10 @@ def ask_question(query: Query):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+# ------------------- LOCAL DEVELOPMENT SUPPORT -------------------
 if __name__ == "__main__":
     import uvicorn
-    import os
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
+    port = int(os.environ.get("PORT", 8000))  # Render will inject PORT env var
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
