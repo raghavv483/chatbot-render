@@ -1,11 +1,9 @@
 services:
   - type: web
-    name: walmart-rag-api
+    name: walmart-streamlit-app
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python main.py
+    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
     envVars:
       - key: GOOGLE_API_KEY
         sync: false
-      - key: PORT
-        value: "8000"
