@@ -5,5 +5,6 @@ sentence-transformers
 langchain-google-genai
 langchain-core
 langchain
-chromadb
 pydantic
+scikit-learn
+numpy

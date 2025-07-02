@@ -2,13 +2,14 @@ import streamlit as st
 import pandas as pd
 import os
 from dotenv import load_dotenv
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 load_dotenv()
 
 from sentence_transformers import SentenceTransformer
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import PromptTemplate
 from langchain.chains import LLMChain
-import chromadb
 
 # ------------------- CONFIG -------------------
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
@@ -21,6 +22,52 @@ st.set_page_config(
     page_icon="🛒",
     layout="wide"
 )
+
+# ------------------- VECTOR STORE CLASS -------------------
+class SimpleVectorStore:
+    def __init__(self):
+        self.documents = []
+        self.embeddings = []
+        self.metadatas = []
+        self.ids = []
+    
+    def add(self, documents, embeddings, metadatas, ids):
+        self.documents.extend(documents)
+        self.embeddings.extend(embeddings)
+        self.metadatas.extend(metadatas)
+        self.ids.extend(ids)
+    
+    def query(self, query_embedding, n_results=5, where=None):
+        # Filter by metadata if specified
+        if where:
+            filtered_indices = []
+            for i, metadata in enumerate(self.metadatas):
+                match = True
+                for key, value in where.items():
+                    if metadata.get(key) != value:
+                        match = False
+                        break
+                if match:
+                    filtered_indices.append(i)
+        else:
+            filtered_indices = list(range(len(self.documents)))
+        
+        if not filtered_indices:
+            return {"documents": [[]], "distances": [[]]}
+        
+        # Calculate similarities
+        filtered_embeddings = [self.embeddings[i] for i in filtered_indices]
+        similarities = cosine_similarity([query_embedding], filtered_embeddings)[0]
+        
+        # Get top results
+        top_indices = np.argsort(similarities)[::-1][:n_results]
+        
+        results = {
+            "documents": [[self.documents[filtered_indices[i]] for i in top_indices]],
+            "distances": [[1 - similarities[i] for i in top_indices]]
+        }
+        
+        return results
 
 # ------------------- CACHE FUNCTIONS -------------------
 @st.cache_resource
@@ -45,24 +92,21 @@ def load_data():
     return df, documents, metadatas
 
 @st.cache_resource
-def setup_chromadb():
+def setup_vector_store():
     df, documents, metadatas = load_data()
     model = load_model()
     
     embeddings = model.encode(documents).tolist()
     
-    client = chromadb.Client()
-    collection = client.get_or_create_collection(name="walmart_products")
+    vector_store = SimpleVectorStore()
+    vector_store.add(
+        documents=documents,
+        embeddings=embeddings,
+        metadatas=metadatas,
+        ids=[f"prod_{i}" for i in range(len(documents))]
+    )
     
-    if collection.count() == 0:
-        collection.add(
-            documents=documents,
-            embeddings=embeddings,
-            metadatas=metadatas,
-            ids=[f"prod_{i}" for i in range(len(documents))]
-        )
-    
-    return collection
+    return vector_store
 
 @st.cache_resource
 def setup_llm():
@@ -100,7 +144,7 @@ def main():
     # Initialize components
     try:
         model = load_model()
-        collection = setup_chromadb()
+        vector_store = setup_vector_store()
         rag_chain = setup_rag_chain()
         df, _, _ = load_data()
         
@@ -130,9 +174,9 @@ def main():
                     # Get query embedding
                     query_embedding = model.encode([user_question])[0]
                     
-                    # Search in ChromaDB
-                    results = collection.query(
-                        query_embeddings=[query_embedding],
+                    # Search in vector store
+                    results = vector_store.query(
+                        query_embedding=query_embedding,
                         n_results=5,
                         where={"store": selected_store}
                     )
