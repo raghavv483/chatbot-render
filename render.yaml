@@ -3,7 +3,9 @@ services:
     name: walmart-rag-api
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    startCommand: python main.py
     envVars:
       - key: GOOGLE_API_KEY
         sync: false
+      - key: PORT
+        value: "8000"
